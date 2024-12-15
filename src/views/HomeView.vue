@@ -328,6 +328,13 @@ export default {
               const recordedVideoElement =
                 document.getElementById("recorded-video");
               recordedVideoElement.src = videoUrl;
+
+              const a = document.createElement("a");
+              a.href = videoUrl;
+              a.download = "video.mp4"; // Tên file video khi tải về
+              document.body.appendChild(a); // Thêm thẻ <a> vào body để hoạt động
+              a.click(); // Tự động click vào thẻ để tải video về
+              document.body.removeChild(a);
             };
           })
           .catch(function (error) {
