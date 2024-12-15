@@ -157,14 +157,16 @@
 
 <script>
 import { onMounted, ref } from "vue";
-import axios from "axios";
 import HeaderComponent from "@/components/HeaderComponent.vue";
+import { useStorage } from "@/composables/useStorage";
 export default {
   name: "HomeView",
   components: {
     HeaderComponent,
   },
   setup() {
+    const { uploadFile } = useStorage();
+
     const email = ref(localStorage.getItem("email-kyc"));
     const hasFile = ref(true);
     const hasImage = ref(null);
@@ -219,85 +221,6 @@ export default {
       hasVideo.value = true;
     };
 
-    const uploadFile = async (file) => {
-      ocrText.value = null;
-      ocrText2.value = null;
-      isSuccess.value = null;
-      try {
-        // Tạo FormData và thêm file
-        isSuccess.value = false;
-        const formData = new FormData();
-        formData.append("file", file);
-
-        // Gửi yêu cầu POST để upload file
-        const response = await axios.post(
-          "http://127.0.0.1:5000/upload",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        if (response) {
-          isSuccess.value = null;
-        }
-
-        console.log("File đã được gửi thành công:", response);
-
-        // Gắn giá trị path từ response
-        path1.value = response.data.path1;
-        path2.value = response.data.path2;
-        path3.value = response.data.path3;
-        hasFile.value = true; // Đã có file
-
-        // Gửi yêu cầu POST với path1
-        const imageUrl = path1.value;
-        try {
-          isSuccess1.value = false;
-          const postResponse2 = await axios.post(
-            "http://127.0.0.1:3001/upload",
-            {
-              imageUrl: imageUrl,
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          if (postResponse2) {
-            ocrText2.value = postResponse2.data.ocrText;
-            isSuccess1.value = null;
-          }
-        } catch (error) {
-          console.log(error);
-        }
-        try {
-          isSuccess2.value = false;
-          const postResponse = await axios.post(
-            "http://127.0.0.1:3000/upload",
-            {
-              imageUrl: imageUrl,
-            },
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          if (postResponse) {
-            ocrText.value = postResponse.data.ocrText;
-            isSuccess2.value = null;
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      } catch (error) {
-        console.error("Đã xảy ra lỗi:", error);
-      }
-    };
-
     function back() {
       window.location.reload();
     }
@@ -322,19 +245,17 @@ export default {
               recordedChunks.push(event.data);
             };
 
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = async () => {
               const blob = new Blob(recordedChunks, { type: "video/webm" });
               const videoUrl = URL.createObjectURL(blob);
               const recordedVideoElement =
                 document.getElementById("recorded-video");
               recordedVideoElement.src = videoUrl;
 
-              const a = document.createElement("a");
-              a.href = videoUrl;
-              a.download = "video.mp4"; // Tên file video khi tải về
-              document.body.appendChild(a); // Thêm thẻ <a> vào body để hoạt động
-              a.click(); // Tự động click vào thẻ để tải video về
-              document.body.removeChild(a);
+              const file = new File([blob], "video.mp4", { type: "video/mp4" });
+
+              const response = await uploadFile(file);
+              console.log(response);
             };
           })
           .catch(function (error) {
